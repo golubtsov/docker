@@ -1,0 +1,61 @@
+services:
+    quizbot-backend-fpm:
+        build:
+            args:
+                user: quizbot-backend-user
+                uid: 1000
+            context: ./
+            dockerfile: ops/Dockerfile
+        image: quizbot-backend
+        container_name: quizbot-backend-fpm
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        networks:
+            - quizbot-backend
+
+    quizbot-backend-mysql:
+        image: mysql:8.0.29
+        container_name: quizbot-backend-mysql
+        ports:
+            - 3306:3306
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: "%"
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        volumes:
+            - 'mysql:/var/lib/mysql'
+        networks:
+            - quizbot-backend
+    quizbot-backend-nginx:
+        image: nginx:alpine
+        container_name: quizbot-backend-nginx
+        ports:
+            - 8000:80
+        volumes:
+            - ./:/var/www
+            - ./ops/nginx_local:/etc/nginx/conf.d/
+        networks:
+            - quizbot-backend
+    quizbot-backend-redis:
+        image: 'redis:alpine'
+        container_name: quizbot-backend-redis
+        ports:
+            - '${FORWARD_REDIS_PORT:-6379}:6379'
+        volumes:
+            - './data/redis:/data'
+        networks:
+            - quizbot-backend
+networks:
+    quizbot-backend:
+        name: quizbot-backend
+        driver: bridge
+volumes:
+    mysql:
+        driver: local
+
